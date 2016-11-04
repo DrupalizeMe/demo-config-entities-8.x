@@ -1,0 +1,7 @@
+transcode_profile.admin_settings_form:
+  title: 'Transcode Profile'
+  route_name: transcode_profile.admin_settings_form
+  description: 'Manage transcode profiles'
+  parent: system.admin_config_development
+  weight: 99
+
