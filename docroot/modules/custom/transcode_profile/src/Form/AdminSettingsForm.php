@@ -4,6 +4,10 @@ namespace Drupal\transcode_profile\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Config\ConfigFactory;
+use Drupal\Core\Entity\EntityTypeManager;
 
 /**
  * Class AdminSettingsForm.
@@ -11,7 +15,37 @@ use Drupal\Core\Form\FormStateInterface;
  * @package Drupal\transcode_profile\Form
  */
 class AdminSettingsForm extends ConfigFormBase {
-
+  /**
+   * Drupal\Core\Config\ConfigFactory definition.
+   *
+   * @var Drupal\Core\Config\ConfigFactory
+   */
+  protected $config_factory;
+  
+  /**
+   * Drupal\Core\Entity\EntityTypeManager definition.
+   *
+   * @var Drupal\Core\Entity\EntityTypeManager
+   */
+  protected $entity_type_manager;
+  
+  public function __construct(
+    ConfigFactoryInterface $config_factory,
+    ConfigFactory $config_factory,
+    EntityTypeManager $entity_type_manager
+  ) {
+    parent::__construct($config_factory);
+    $this->config_factory = $config_factory;
+    $this->entity_type_manager = $entity_type_manager;
+  }
+  
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('config.factory'),
+      $container->get('entity_type.manager')
+    );
+  }
   /**
    * {@inheritdoc}
    */
@@ -33,13 +67,19 @@ class AdminSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('transcode_profile.AdminSettings');
+    $transcode_profiles = $this->entity_type_manager->getStorage('transcode_profile')->loadMultiple();
+    $dropdown_array = [];
+    foreach($transcode_profiles as $profile) {
+      $key = $profile->id();
+      $value = $profile->label();
+      $dropdown_array[$key] = $value;
+    }
     $form['profile_name'] = [
-      '#type' => 'textfield',
+      '#type' => 'select',
       '#title' => $this->t('Profile Name'),
       '#description' => $this->t('Video transcode profile name'),
-      '#maxlength' => 64,
-      '#size' => 64,
       '#default_value' => $config->get('profile_name'),
+      '#options' => $dropdown_array,
     ];
     $form['enable_transcoding'] = [
       '#type' => 'checkbox',

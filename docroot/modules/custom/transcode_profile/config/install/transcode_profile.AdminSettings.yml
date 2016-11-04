@@ -1,2 +1,2 @@
-profile_name: "1920x1080 h264"
+profile_id: 'high_quality'
 enable_transcoding: 1
