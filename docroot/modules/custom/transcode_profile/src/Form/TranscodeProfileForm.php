@@ -36,6 +36,14 @@ class TranscodeProfileForm extends EntityForm {
       ],
       '#disabled' => !$transcode_profile->isNew(),
     ];
+    
+    $form['codec'] = [
+      '#type' => 'textfield',
+      '#title' => 'Codec',
+      '#maxlength' => 255,
+      '#default_value' => $transcode_profile->getCodec(),
+      '#description' => $this->t('The video codec to use.'),
+    ];
 
     /* You will need additional form elements for your custom properties. */
 

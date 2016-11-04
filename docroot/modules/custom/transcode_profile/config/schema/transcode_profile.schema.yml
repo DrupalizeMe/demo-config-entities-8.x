@@ -8,5 +8,8 @@ transcode_profile.transcode_profile.*:
     label:
       type: label
       label: 'Label'
+    codec:
+      type: label
+      label: 'Codec'
     uuid:
       type: string

@@ -16,6 +16,7 @@ class TranscodeProfileListBuilder extends ConfigEntityListBuilder {
   public function buildHeader() {
     $header['label'] = $this->t('Transcode profile');
     $header['id'] = $this->t('Machine name');
+    $header['codec'] = $this->t('Codec');
     return $header + parent::buildHeader();
   }
 
@@ -25,6 +26,7 @@ class TranscodeProfileListBuilder extends ConfigEntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     $row['label'] = $entity->label();
     $row['id'] = $entity->id();
+    $row['codec'] = $entity->getCodec();
     // You probably want a few more properties here...
     return $row + parent::buildRow($entity);
   }

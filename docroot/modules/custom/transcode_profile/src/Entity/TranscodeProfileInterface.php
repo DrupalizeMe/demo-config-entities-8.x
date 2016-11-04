@@ -10,4 +10,6 @@ use Drupal\Core\Config\Entity\ConfigEntityInterface;
 interface TranscodeProfileInterface extends ConfigEntityInterface {
 
   // Add get/set methods for your configuration properties here.
+  
+  public function getCodec();
 }
