@@ -1,0 +1,12 @@
+transcode_profile.transcode_profile.*:
+  type: config_entity
+  label: 'Transcode profile config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    uuid:
+      type: string

@@ -1,0 +1,6 @@
+entity.transcode_profile.add_form:
+  route_name: 'entity.transcode_profile.add_form'
+  title: 'Add Transcode profile'
+  appears_on:
+    - entity.transcode_profile.collection
+
