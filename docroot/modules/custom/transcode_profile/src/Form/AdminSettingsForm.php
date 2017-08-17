@@ -51,7 +51,7 @@ class AdminSettingsForm extends ConfigFormBase {
    */
   protected function getEditableConfigNames() {
     return [
-      'transcode_profile.AdminSettings',
+      'transcode_profile.adminsettings',
     ];
   }
 
@@ -66,7 +66,7 @@ class AdminSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $config = $this->config('transcode_profile.AdminSettings');
+    $config = $this->config('transcode_profile.adminsettings');
     $transcode_profiles = $this->entity_type_manager->getStorage('transcode_profile')->loadMultiple();
     $dropdown_array = [];
     foreach($transcode_profiles as $profile) {
@@ -103,7 +103,7 @@ class AdminSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     parent::submitForm($form, $form_state);
 
-    $this->config('transcode_profile.AdminSettings')
+    $this->config('transcode_profile.adminsettings')
       ->set('profile_name', $form_state->getValue('profile_name'))
       ->set('enable_transcoding', $form_state->getValue('enable_transcoding'))
       ->save();
