@@ -166,7 +166,7 @@ class PhpDumper extends Dumper
             }
         }
         if ($unusedEnvs) {
-            throw new EnvParameterException($unusedEnvs);
+            throw new EnvParameterException($unusedEnvs, null, 'Environment variables "%s" are never used. Please, check your container\'s configuration.');
         }
 
         return $code;
@@ -267,12 +267,11 @@ class PhpDumper extends Dumper
     /**
      * Generates the require_once statement for service includes.
      *
-     * @param string     $id         The service id
      * @param Definition $definition
      *
      * @return string
      */
-    private function addServiceInclude($id, $definition)
+    private function addServiceInclude($definition)
     {
         $template = "        require_once %s;\n";
         $code = '';
@@ -347,9 +346,9 @@ class PhpDumper extends Dumper
                 $code .= $this->addNewInstance($sDefinition, '$'.$name, ' = ', $id);
 
                 if (!$this->hasReference($id, $sDefinition->getMethodCalls(), true) && !$this->hasReference($id, $sDefinition->getProperties(), true)) {
-                    $code .= $this->addServiceProperties(null, $sDefinition, $name);
-                    $code .= $this->addServiceMethodCalls(null, $sDefinition, $name);
-                    $code .= $this->addServiceConfigurator(null, $sDefinition, $name);
+                    $code .= $this->addServiceProperties($sDefinition, $name);
+                    $code .= $this->addServiceMethodCalls($sDefinition, $name);
+                    $code .= $this->addServiceConfigurator($sDefinition, $name);
                 }
 
                 $code .= "\n";
@@ -389,15 +388,9 @@ class PhpDumper extends Dumper
      */
     private function addServiceInstance($id, Definition $definition)
     {
-        $class = $definition->getClass();
+        $class = $this->dumpValue($definition->getClass());
 
-        if ('\\' === substr($class, 0, 1)) {
-            $class = substr($class, 1);
-        }
-
-        $class = $this->dumpValue($class);
-
-        if (0 === strpos($class, "'") && false === strpos($class, '$') && !preg_match('/^\'[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\\{2}[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*\'$/', $class)) {
+        if (0 === strpos($class, "'") && false === strpos($class, '$') && !preg_match('/^\'(?:\\\{2})?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(?:\\\{2}[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*\'$/', $class)) {
             throw new InvalidArgumentException(sprintf('"%s" is not a valid class name for the "%s" service.', $class, $id));
         }
 
@@ -453,13 +446,12 @@ class PhpDumper extends Dumper
     /**
      * Adds method calls to a service definition.
      *
-     * @param string     $id
      * @param Definition $definition
      * @param string     $variableName
      *
      * @return string
      */
-    private function addServiceMethodCalls($id, Definition $definition, $variableName = 'instance')
+    private function addServiceMethodCalls(Definition $definition, $variableName = 'instance')
     {
         $calls = '';
         foreach ($definition->getMethodCalls() as $call) {
@@ -474,7 +466,7 @@ class PhpDumper extends Dumper
         return $calls;
     }
 
-    private function addServiceProperties($id, Definition $definition, $variableName = 'instance')
+    private function addServiceProperties(Definition $definition, $variableName = 'instance')
     {
         $code = '';
         foreach ($definition->getProperties() as $name => $value) {
@@ -517,9 +509,9 @@ class PhpDumper extends Dumper
             }
 
             $name = (string) $this->definitionVariables->offsetGet($iDefinition);
-            $code .= $this->addServiceProperties(null, $iDefinition, $name);
-            $code .= $this->addServiceMethodCalls(null, $iDefinition, $name);
-            $code .= $this->addServiceConfigurator(null, $iDefinition, $name);
+            $code .= $this->addServiceProperties($iDefinition, $name);
+            $code .= $this->addServiceMethodCalls($iDefinition, $name);
+            $code .= $this->addServiceConfigurator($iDefinition, $name);
         }
 
         if ('' !== $code) {
@@ -532,13 +524,12 @@ class PhpDumper extends Dumper
     /**
      * Adds configurator definition.
      *
-     * @param string     $id
      * @param Definition $definition
      * @param string     $variableName
      *
      * @return string
      */
-    private function addServiceConfigurator($id, Definition $definition, $variableName = 'instance')
+    private function addServiceConfigurator(Definition $definition, $variableName = 'instance')
     {
         if (!$callable = $definition->getConfigurator()) {
             return '';
@@ -586,7 +577,7 @@ class PhpDumper extends Dumper
             $return[] = '@throws RuntimeException always since this service is expected to be injected dynamically';
         } elseif ($class = $definition->getClass()) {
             $class = $this->container->resolveEnvPlaceholders($class);
-            $return[] = sprintf('@return %s A %s instance', 0 === strpos($class, '%') ? 'object' : '\\'.ltrim($class, '\\'), ltrim($class, '\\'));
+            $return[] = sprintf(0 === strpos($class, '%') ? '@return object A %1$s instance' : '@return \%s', ltrim($class, '\\'));
         } elseif ($definition->getFactory()) {
             $factory = $definition->getFactory();
             if (is_string($factory)) {
@@ -611,40 +602,14 @@ class PhpDumper extends Dumper
         $return = str_replace("\n     * \n", "\n     *\n", implode("\n     * ", $return));
         $return = $this->container->resolveEnvPlaceholders($return);
 
-        $doc = '';
-        if ($definition->isShared()) {
-            $doc .= <<<'EOF'
-
-     *
-     * This service is shared.
-     * This method always returns the same instance of the service.
-EOF;
-        }
-
-        if (!$definition->isPublic()) {
-            $doc .= <<<'EOF'
-
-     *
-     * This service is private.
-     * If you want to be able to request this service from the container directly,
-     * make it public, otherwise you might end up with broken code.
-EOF;
-        }
-
-        if ($definition->isAutowired()) {
-            $doc .= <<<EOF
-
-     *
-     * This service is autowired.
-EOF;
-        }
+        $shared = $definition->isShared() ? ' shared' : '';
+        $public = $definition->isPublic() ? 'public' : 'private';
+        $autowired = $definition->isAutowired() ? ' autowired' : '';
 
         if ($definition->isLazy()) {
             $lazyInitialization = '$lazyLoad = true';
-            $lazyInitializationDoc = "\n     * @param bool    \$lazyLoad whether to try lazy-loading the service with a proxy\n     *";
         } else {
             $lazyInitialization = '';
-            $lazyInitializationDoc = '';
         }
 
         // with proxies, for 5.3.3 compatibility, the getter must be public to be accessible to the initializer
@@ -654,8 +619,8 @@ EOF;
         $code = <<<EOF
 
     /*{$this->docStar}
-     * Gets the '$id' service.$doc
-     *$lazyInitializationDoc
+     * Gets the $public '$id'$shared$autowired service.
+     *
      * $return
      */
     {$visibility} function {$methodName}($lazyInitialization)
@@ -673,14 +638,14 @@ EOF;
             }
 
             $code .=
-                $this->addServiceInclude($id, $definition).
+                $this->addServiceInclude($definition).
                 $this->addServiceLocalTempVariables($id, $definition).
                 $this->addServiceInlinedDefinitions($id, $definition).
                 $this->addServiceInstance($id, $definition).
                 $this->addServiceInlinedDefinitionsSetup($id, $definition).
-                $this->addServiceProperties($id, $definition).
-                $this->addServiceMethodCalls($id, $definition).
-                $this->addServiceConfigurator($id, $definition).
+                $this->addServiceProperties($definition).
+                $this->addServiceMethodCalls($definition).
+                $this->addServiceConfigurator($definition).
                 $this->addServiceReturn($id, $definition)
             ;
         }
@@ -772,7 +737,7 @@ EOF;
     private function startClass($class, $baseClass, $namespace)
     {
         $bagClass = $this->container->isFrozen() ? 'use Symfony\Component\DependencyInjection\ParameterBag\FrozenParameterBag;' : 'use Symfony\Component\DependencyInjection\ParameterBag\\ParameterBag;';
-        $namespaceLine = $namespace ? "namespace $namespace;\n" : '';
+        $namespaceLine = $namespace ? "\nnamespace $namespace;\n" : '';
 
         return <<<EOF
 <?php
@@ -1191,7 +1156,15 @@ EOF;
 
         $conditions = array();
         foreach ($services as $service) {
+            if ($this->container->hasDefinition($service) && !$this->container->getDefinition($service)->isPublic()) {
+                continue;
+            }
+
             $conditions[] = sprintf("\$this->has('%s')", $service);
+        }
+
+        if (!$conditions) {
+            return $code;
         }
 
         // re-indent the wrapped code
@@ -1445,11 +1418,13 @@ EOF;
         if (false !== strpos($class, '$')) {
             return sprintf('${($_ = %s) && false ?: "_"}', $class);
         }
-        if (0 !== strpos($class, "'") || !preg_match('/^\'[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\\{2}[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*\'$/', $class)) {
+        if (0 !== strpos($class, "'") || !preg_match('/^\'(?:\\\{2})?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(?:\\\{2}[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*\'$/', $class)) {
             throw new RuntimeException(sprintf('Cannot dump definition because of invalid class name (%s)', $class ?: 'n/a'));
         }
 
-        return '\\'.substr(str_replace('\\\\', '\\', $class), 1, -1);
+        $class = substr(str_replace('\\\\', '\\', $class), 1, -1);
+
+        return 0 === strpos($class, '\\') ? $class : '\\'.$class;
     }
 
     /**
@@ -1478,6 +1453,10 @@ EOF;
      */
     private function getServiceCall($id, Reference $reference = null)
     {
+        while ($this->container->hasAlias($id)) {
+            $id = (string) $this->container->getAlias($id);
+        }
+
         if ('service_container' === $id) {
             return '$this';
         }
@@ -1489,10 +1468,6 @@ EOF;
         }
         if (null !== $reference && ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE !== $reference->getInvalidBehavior()) {
             return sprintf('$this->get(\'%s\', ContainerInterface::NULL_ON_INVALID_REFERENCE)', $id);
-        }
-
-        if ($this->container->hasAlias($id)) {
-            $id = (string) $this->container->getAlias($id);
         }
 
         return sprintf('$this->get(\'%s\')', $id);
@@ -1593,7 +1568,15 @@ EOF;
                 throw new RuntimeException('Unable to use expressions as the Symfony ExpressionLanguage component is not installed.');
             }
             $providers = $this->container->getExpressionLanguageProviders();
-            $this->expressionLanguage = new ExpressionLanguage(null, $providers);
+            $this->expressionLanguage = new ExpressionLanguage(null, $providers, function ($arg) {
+                $id = '""' === substr_replace($arg, '', 1, -1) ? stripcslashes(substr($arg, 1, -1)) : null;
+
+                if (null !== $id && ($this->container->hasAlias($id) || $this->container->hasDefinition($id))) {
+                    return $this->getServiceCall($id);
+                }
+
+                return sprintf('$this->get(%s)', $arg);
+            });
 
             if ($this->container->isTrackingResources()) {
                 foreach ($providers as $provider) {
