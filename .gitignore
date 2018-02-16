@@ -11,6 +11,9 @@
 # including Drupal core.
 # core
 
+# Drupal Console's dependencies are managed with Composer.
+vendor
+
 # Core's dependencies are managed with Composer.
 docroot/vendor
 
