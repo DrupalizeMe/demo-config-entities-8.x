@@ -10,27 +10,27 @@ This master branch of this repo contains a Drupal 8 codebase. You will need to p
 1. Copy _docroot/sites/default/default.settings.php_ to _sites/default/settings.php_. For example:
 
     ```
-    cd docroot
-    cp sites/default/default.settings.php sites/default/settings.php
+    > cd docroot
+    > cp sites/default/default.settings.php sites/default/settings.php
     ```
 
 2. Create _sites/default/files_ directory. For example:
 
     ```
-    mkdir sites/default/files
+    > mkdir sites/default/files
     ```
 
 3. Change permissions of _sites/default/settings.php_ and _sites/default/files_ to permit Drupal installation. For example:
 
     ```
-    chmod 775 sites/default/settings.php
-    chmod 775 sites/default/files
+    > chmod 775 sites/default/settings.php
+    > chmod 775 sites/default/files
     ```
     
 4. Start up the [php web server](http://php.net/manual/en/features.commandline.webserver.php) or web server of your choice and optionally configure where to serve your files. Using the built-in php web server option (make sure you're in the _docroot_ directory):
 
     ```
-    php -S localhost:8000
+    > php -S localhost:8000
     ```
     
     Which should output:
@@ -49,10 +49,10 @@ This master branch of this repo contains a Drupal 8 codebase. You will need to p
 6. Install Drupal Console. We'll be using Drupal Console commands throughout this tutorial series. To install it, change directories to the root of this repo and then install Drupal Console with Composer. See [Download Composer](https://getcomposer.org/download/) if you need to install Composer on your dev environment.
 
     ```
-    cd ../
-    ls
+    > cd ../
+    > ls
     README.md	composer.json	composer.lock	config		data		docroot
-    composer install
+    > composer install
     ```
     
     This will download Drupal Console and its dependencies to a new _vendor_ directory.
